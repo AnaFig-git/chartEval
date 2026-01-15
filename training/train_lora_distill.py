@@ -128,7 +128,8 @@ class DistillationTrainer(Trainer):
         if refine_mask.any():
             refine_logits = student_logits[refine_mask]
             refine_labels = labels[refine_mask]
-            
+            shift_logits = refine_logits[...,:-1,:].contiguous()
+            shift_labels = refine_labels[..., 1:].contiguous()
             # Cross-entropy loss
             loss_refine = F.cross_entropy(
                 refine_logits.view(-1, refine_logits.size(-1)),
