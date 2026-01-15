@@ -7,7 +7,7 @@ This repository contains the code to use AgentGER from the paper [AgentGER: Towa
 ## 👋 Introduction
 Figure-to-text is a key task for assessing figure understanding capabilities of models. Existing approaches face two main challenges: the high cost of constructing high-quality data and the lack of fine-grained, interpretable evaluation aligned with human experts. Accordingly, we propose AgentGER, an agent framework that integrates capabilities of generation, evaluation, and refinement for figure-to-text. AgentGER includes a Generation Model that produces summaries with hierarchical quality levels, an Evaluation Model that performs multi-dimensional, human-aligned assessment with a Chain-of-Evaluation mechanism, and a Refinement Model that improves summaries based on evaluation feedback. We further construct a large-scale dataset with 11,000 summaries and 55,000 multi-dimensional scoring labels through a human–machine collaborative pipeline. Experiments show that AgentGER significantly outperforms all strong baselines, surpasses Gemini-3.0-Pro on evaluation benchmarks, and achieves performance comparable to human experts in both evaluation and refinement tasks.
 <p align="center">
-  <img src="System Architecture2.png"/>
+  <img src="Introduction.png" width="70%"/>
 </p> 
 
 ## ⚙ System Architecture
