@@ -23,8 +23,7 @@ Figure-to-text is a key task for assessing figure understanding capabilities of 
 | **Analysis**<br>    |Whether professional terminology is used and analysis depth is achieved|Lack of professionalism|Insufficient professional expression|Accurate terminology and in-depth analysis|
 
 **Scoring Rules**：
-- Total Score = Σ(Dimension Score × Weight) × 5, with a full score of 10 points
-- Default Weights: Faithfulness 0.35, Completeness 0.25, Conciseness 0.20, Logicality 0.15, Analysis 0.05
+- Total Score = Σ(Dimension Score × 0.2) × 5, with a full score of 10 points
 
 **Validation Rules**：
 - Total score of the five dimensions ≥ 8 or 9 (out of 10 points)
