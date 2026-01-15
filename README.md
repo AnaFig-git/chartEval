@@ -5,9 +5,14 @@ This repository contains the code to use AgentGER from the paper [AgentGER: Towa
 
 *🤗 This codebase is released as Version v1.0. We are dedicated to its continuous improvement. If you have any questions or suggestions, you are welcome to open an issue or submit a pull request for new features or bug fixes.*
 ## 👋 Introduction
+
 Figure-to-text is a key task for assessing figure understanding capabilities of models. Existing approaches face two main challenges: the high cost of constructing high-quality data and the lack of fine-grained, interpretable evaluation aligned with human experts. Accordingly, we propose AgentGER, an agent framework that integrates capabilities of generation, evaluation, and refinement for figure-to-text. AgentGER includes a Generation Model that produces summaries with hierarchical quality levels, an Evaluation Model that performs multi-dimensional, human-aligned assessment with a Chain-of-Evaluation mechanism, and a Refinement Model that improves summaries based on evaluation feedback. We further construct a large-scale dataset with 11,000 summaries and 55,000 multi-dimensional scoring labels through a human–machine collaborative pipeline. Experiments show that AgentGER significantly outperforms all strong baselines, surpasses Gemini-3.0-Pro on evaluation benchmarks, and achieves performance comparable to human experts in both evaluation and refinement tasks.
 <p align="center">
+<<<<<<< HEAD
   <img src="Introduction.png"  width="70%"/>
+=======
+  <img src="Introduction.png" width="65%"/>
+>>>>>>> 33723243f236faa7e14fca057b9e858681eed07b
 </p> 
 
 ## ⚙ System Architecture
@@ -22,8 +27,7 @@ Figure-to-text is a key task for assessing figure understanding capabilities of 
 | **Analysis**<br>    |Whether professional terminology is used and analysis depth is achieved|Lack of professionalism|Insufficient professional expression|Accurate terminology and in-depth analysis|
 
 **Scoring Rules**：
-- Total Score = Σ(Dimension Score × Weight) × 5, with a full score of 10 points
-- Default Weights: Faithfulness 0.35, Completeness 0.25, Conciseness 0.20, Logicality 0.15, Analysis 0.05
+- Total Score = Σ(Dimension Score × 0.2) × 5, with a full score of 10 points
 
 **Validation Rules**：
 - Total score of the five dimensions ≥ 8 or 9 (out of 10 points)
