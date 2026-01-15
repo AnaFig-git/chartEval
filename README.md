@@ -35,7 +35,7 @@ GPU Memory >= 24GB (32GB+ recommended; 30B model requires 80GB+)
 ```bash
 # Method 1: Use installation script
 bash install.sh
-# Dataset Download
+# Method 2: Use pip
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
