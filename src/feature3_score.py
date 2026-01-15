@@ -1,6 +1,6 @@
 """
-功能三：仅五维度评分（不生成 improved_summary）
-输入图片和总结，输出评分、解释和权重
+Function 3: Five-Dimensional Scoring Only (no improved_summary generation)
+Input an image and summary, output scores, explanations, and weights
 """
 from typing import Dict, Any, Optional
 
@@ -8,7 +8,7 @@ from .model_loader import get_model
 from .utils import parse_final_json
 
 
-# 功能三的评估提示词（不包含 improved_summary）
+# Evaluation prompt for Function 3 (no improved_summary)
 EVALUATE_PROMPT_SCORE_ONLY = '''You are a professional expert in figure-summary evaluation, skilled at conducting strict five-dimension evaluations based on multimodal input (image + text).
 
 Based on the input "figure image" and "original summary,"
@@ -75,26 +75,26 @@ def score_only(
     do_sample: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """
-    功能三：仅评分（不生成改进版本）
+    Function 3: Scoring Only (no improved version generation)
     
     Args:
-        image_path: 图片路径
-        summary: 待评估的总结
-        model_path: 模型路径
-        lora_path: LoRA 权重路径（可选）
-        temperature: 温度参数
-        top_p: top-p 采样参数
-        do_sample: 是否采样
+        image_path: Path to image
+        summary: Summary to be evaluated
+        model_path: Path to model
+        lora_path: Path to LoRA weights (optional)
+        temperature: Temperature parameter
+        top_p: Top-p sampling parameter
+        do_sample: Whether to use sampling
         
     Returns:
-        包含 scores, reasons, weights 的字典
+        Dictionary containing scores, reasons, and weights
     """
     model = get_model(model_path=model_path, lora_path=lora_path)
     
-    # 构建提示词
+    # Build prompt
     prompt = EVALUATE_PROMPT_SCORE_ONLY.format(summary=summary)
     
-    # 生成评估结果
+    # Generate evaluation results
     output = model.generate(
         image_path=image_path,
         prompt=prompt,
@@ -104,12 +104,12 @@ def score_only(
         do_sample=do_sample,
     )
     
-    # 解析结果
+    # Parse results
     result = parse_final_json(output)
     
     if result is None:
-        print(f"警告: 无法解析评分结果")
-        print(f"原始输出: {output[:500]}...")
+        print(f"Warning: Failed to parse scoring results")
+        print(f"Raw output: {output[:500]}...")
         
     return result
 
@@ -123,24 +123,24 @@ def score_only_retry(
     base_temperature: float = 0.7,
 ) -> Optional[Dict[str, Any]]:
     """
-    带重试机制的功能三
+    Function 3 with retry mechanism
     
     Args:
-        image_path: 图片路径
-        summary: 待评估的总结
-        model_path: 模型路径
-        lora_path: LoRA 权重路径
-        max_retries: 最大重试次数
-        base_temperature: 基础温度
+        image_path: Path to image
+        summary: Summary to be evaluated
+        model_path: Path to model
+        lora_path: Path to LoRA weights
+        max_retries: Maximum number of retries
+        base_temperature: Base temperature
         
     Returns:
-        评分结果
+        Scoring results
     """
     temperatures = [base_temperature, base_temperature + 0.1, base_temperature + 0.2]
     
     for i in range(max_retries):
         temp = temperatures[i] if i < len(temperatures) else base_temperature + 0.1 * i
-        print(f"功能三尝试 {i+1}/{max_retries} (temperature={temp:.2f})")
+        print(f"Function 3 attempt {i+1}/{max_retries} (temperature={temp:.2f})")
         
         result = score_only(
             image_path=image_path,
@@ -155,6 +155,5 @@ def score_only_retry(
         if result is not None:
             return result
             
-    print("功能三所有重试均失败")
+    print("All retries for Function 3 failed")
     return None
-

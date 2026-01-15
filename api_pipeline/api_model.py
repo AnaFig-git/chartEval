@@ -1,8 +1,3 @@
-"""
-API 模型调用模块
-使用智增增 API (Google Gemini 格式) 进行多模态推理
-文档: https://doc.zhizengzeng.com/doc-6882601
-"""
 import base64
 import time
 from typing import Optional, Union
@@ -15,13 +10,13 @@ from .config import API_KEY, API_BASE_URL, MODEL_NAME, REQUEST_TIMEOUT, RETRY_DE
 
 def encode_image_to_base64(image_path: Union[str, Path]) -> str:
     """
-    将图片编码为 base64 字符串
+    Encode image to base64 string
     
     Args:
-        image_path: 图片路径
+        image_path: Image path
         
     Returns:
-        base64 编码的图片字符串
+        Base64 encoded image string
     """
     with open(image_path, "rb") as image_file:
         return base64.standard_b64encode(image_file.read()).decode("utf-8")
@@ -29,13 +24,13 @@ def encode_image_to_base64(image_path: Union[str, Path]) -> str:
 
 def get_image_mime_type(image_path: Union[str, Path]) -> str:
     """
-    获取图片的 MIME 类型
+    Get MIME type of the image
     
     Args:
-        image_path: 图片路径
+        image_path: Image path
         
     Returns:
-        MIME 类型字符串
+        MIME type string
     """
     path = Path(image_path)
     suffix = path.suffix.lower()
@@ -53,7 +48,7 @@ def get_image_mime_type(image_path: Union[str, Path]) -> str:
 
 
 class APIModel:
-    """API 模型封装，使用 Google Gemini 格式"""
+    """API model wrapper, using Google Gemini format"""
     
     def __init__(
         self,
@@ -62,17 +57,17 @@ class APIModel:
         model_name: str = MODEL_NAME,
     ):
         """
-        初始化 API 模型
+        Initialize API model
         
         Args:
-            api_key: API 密钥
-            api_base_url: API 基础 URL
-            model_name: 模型名称
+            api_key: API key
+            api_base_url: API base URL
+            model_name: Model name
         """
         self.api_key = api_key
         self.api_base_url = api_base_url.rstrip("/")
         self.model_name = model_name
-        # Google Gemini API 格式的端点
+        # Google Gemini API format endpoint
         self.endpoint = f"{self.api_base_url}/v1beta/models/{model_name}:generateContent"
         
     def generate(
@@ -85,24 +80,24 @@ class APIModel:
         do_sample: bool = True,
     ) -> str:
         """
-        生成回复（多模态输入）
+        Generate response (multimodal input)
         
         Args:
-            image_path: 图片路径
-            prompt: 提示词
-            max_new_tokens: 最大生成长度
-            temperature: 温度参数
-            top_p: top-p 采样参数
-            do_sample: 是否采样（API 调用时通过 temperature 控制）
+            image_path: Image path
+            prompt: Prompt text
+            max_new_tokens: Maximum generation length
+            temperature: Temperature parameter
+            top_p: Top-p sampling parameter
+            do_sample: Whether to use sampling (controlled by temperature in API call)
             
         Returns:
-            生成的文本
+            Generated text
         """
-        # 编码图片
+        # Encode image
         image_base64 = encode_image_to_base64(image_path)
         mime_type = get_image_mime_type(image_path)
         
-        # 构建请求体（Google Gemini 格式）
+        # Build request body (Google Gemini format)
         payload = {
             "contents": [
                 {
@@ -126,20 +121,20 @@ class APIModel:
             }
         }
         
-        # 请求头（Google Gemini 格式使用 X-goog-api-key）
+        # Request headers (Google Gemini format uses X-goog-api-key)
         headers = {
             "X-goog-api-key": self.api_key,
             "Content-Type": "application/json"
         }
         
-        # 代理配置
+        # Proxy configuration
         proxies = {}
         if HTTP_PROXY:
             proxies["http"] = HTTP_PROXY
         if HTTPS_PROXY:
             proxies["https"] = HTTPS_PROXY
         
-        # 发送请求
+        # Send request
         try:
             response = requests.post(
                 self.endpoint,
@@ -152,7 +147,7 @@ class APIModel:
             
             result = response.json()
             
-            # 提取生成的文本（Google Gemini 格式）
+            # Extract generated text (Google Gemini format)
             if "candidates" in result and len(result["candidates"]) > 0:
                 candidate = result["candidates"][0]
                 if "content" in candidate and "parts" in candidate["content"]:
@@ -160,21 +155,21 @@ class APIModel:
                     if parts and "text" in parts[0]:
                         return parts[0]["text"]
             
-            print(f"警告: API 响应格式异常: {result}")
+            print(f"Warning: Abnormal API response format: {result}")
             return ""
                 
         except requests.exceptions.Timeout:
-            print(f"错误: API 请求超时 (>{REQUEST_TIMEOUT}s)")
+            print(f"Error: API request timed out (>{REQUEST_TIMEOUT}s)")
             return ""
         except requests.exceptions.HTTPError as e:
-            print(f"错误: API HTTP 错误: {e}")
-            print(f"响应内容: {e.response.text if e.response else 'N/A'}")
+            print(f"Error: API HTTP error: {e}")
+            print(f"Response content: {e.response.text if e.response else 'N/A'}")
             return ""
         except requests.exceptions.RequestException as e:
-            print(f"错误: API 请求失败: {e}")
+            print(f"Error: API request failed: {e}")
             return ""
         except Exception as e:
-            print(f"错误: 未知错误: {e}")
+            print(f"Error: Unknown error: {e}")
             return ""
     
     def generate_with_retry(
@@ -188,19 +183,19 @@ class APIModel:
         max_retries: int = 3,
     ) -> str:
         """
-        带重试机制的生成
+        Generate with retry mechanism
         
         Args:
-            image_path: 图片路径
-            prompt: 提示词
-            max_new_tokens: 最大生成长度
-            temperature: 温度参数
-            top_p: top-p 采样参数
-            do_sample: 是否采样
-            max_retries: 最大重试次数
+            image_path: Image path
+            prompt: Prompt text
+            max_new_tokens: Maximum generation length
+            temperature: Temperature parameter
+            top_p: Top-p sampling parameter
+            do_sample: Whether to use sampling
+            max_retries: Maximum number of retries
             
         Returns:
-            生成的文本
+            Generated text
         """
         for attempt in range(max_retries):
             result = self.generate(
@@ -216,13 +211,13 @@ class APIModel:
                 return result
                 
             if attempt < max_retries - 1:
-                print(f"重试 {attempt + 1}/{max_retries}...")
+                print(f"Retrying {attempt + 1}/{max_retries}...")
                 time.sleep(RETRY_DELAY)
                 
         return ""
 
 
-# 全局模型实例（单例模式）
+# Global model instance (singleton pattern)
 _model_instance: Optional[APIModel] = None
 
 
@@ -232,15 +227,15 @@ def get_model(
     model_name: str = MODEL_NAME,
 ) -> APIModel:
     """
-    获取模型实例（单例模式）
+    Get model instance (singleton pattern)
     
     Args:
-        api_key: API 密钥
-        api_base_url: API 基础 URL
-        model_name: 模型名称
+        api_key: API key
+        api_base_url: API base URL
+        model_name: Model name
         
     Returns:
-        模型实例
+        Model instance
     """
     global _model_instance
     

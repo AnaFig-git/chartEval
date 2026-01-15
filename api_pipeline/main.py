@@ -1,23 +1,23 @@
 #!/usr/bin/env python3
 """
-API Pipeline - 使用 API 调用实现链路一（跳过步骤一）
+API Pipeline - Implement Pipeline 1 via API Calls (Skip Step 1)
 
-用法:
-    # 链路一：从 step1 结果构建数据集
+Usage:
+    # Pipeline 1: Build dataset from step1 results
     python api_pipeline/main.py pipeline1 --input ./data/output/dataset_step1.jsonl --output ./data/output/dataset_api.jsonl
 
-    # 链路二：用户优化（单张图片）
-    python api_pipeline/main.py pipeline2 --image ./data/sample.png --summary "原始总结内容"
+    # Pipeline 2: User Optimization (Single Image)
+    python api_pipeline/main.py pipeline2 --image ./data/sample.png --summary "Original summary content"
 
-    # 链路三：直接评分（单张图片）
-    python api_pipeline/main.py pipeline3 --image ./data/sample.png --summary "待评分的总结内容"
+    # Pipeline 3: Direct Scoring (Single Image)
+    python api_pipeline/main.py pipeline3 --image ./data/sample.png --summary "Summary content to be scored"
 """
 import sys
 import os
 import argparse
 import json
 
-# 添加项目根目录到路径
+# Add project root directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from api_pipeline.pipeline import (
@@ -29,8 +29,8 @@ from src.utils import save_to_jsonl, get_total_score
 
 
 def cmd_pipeline1(args):
-    """链路一：从 step1 结果构建数据集"""
-    print("执行 API 版链路一：从 step1 结果构建数据集")
+    """Pipeline 1: Build dataset from step1 results"""
+    print("Executing API Version Pipeline 1: Build dataset from step1 results")
     
     success, total = pipeline1_build_dataset_from_step1(
         input_path=args.input,
@@ -39,12 +39,12 @@ def cmd_pipeline1(args):
         resume=args.resume,
     )
     
-    print(f"完成: 成功 {success}/{total}")
+    print(f"Completed: Success {success}/{total}")
 
 
 def cmd_pipeline2(args):
-    """链路二：用户优化"""
-    print("执行 API 版链路二：用户优化")
+    """Pipeline 2: User Optimization"""
+    print("Executing API Version Pipeline 2: User Optimization")
     
     result = pipeline2_user_optimize(
         image_path=args.image,
@@ -53,18 +53,18 @@ def cmd_pipeline2(args):
     )
     
     if result:
-        print("\n最终结果:")
+        print("\nFinal Result:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Result saved to: {args.output}")
     else:
-        print("优化失败")
+        print("Optimization failed")
 
 
 def cmd_pipeline3(args):
-    """链路三：直接评分"""
-    print("执行 API 版链路三：直接评分")
+    """Pipeline 3: Direct Scoring"""
+    print("Executing API Version Pipeline 3: Direct Scoring")
     
     result = pipeline3_direct_score(
         image_path=args.image,
@@ -72,115 +72,115 @@ def cmd_pipeline3(args):
     )
     
     if result:
-        print("\n评分结果:")
+        print("\nScoring Result:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         total = get_total_score(result)
-        print(f"总分: {total}/10")
+        print(f"Total Score: {total}/10")
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Result saved to: {args.output}")
     else:
-        print("评分失败")
+        print("Scoring failed")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="API Pipeline - 使用 API 调用实现链路功能",
+        description="API Pipeline - Implement pipeline functions via API calls",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     
-    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
     
-    # 链路一
+    # Pipeline 1
     p1_parser = subparsers.add_parser(
         "pipeline1",
-        help="链路一：从 step1 结果构建数据集",
+        help="Pipeline 1: Build dataset from step1 results",
     )
     p1_parser.add_argument(
         "--input",
         type=str,
         required=True,
-        help="step1 结果文件路径（dataset_step1.jsonl）",
+        help="Path to step1 result file (dataset_step1.jsonl)",
     )
     p1_parser.add_argument(
         "--output",
         type=str,
         required=True,
-        help="输出 JSONL 文件路径",
+        help="Output JSONL file path",
     )
     p1_parser.add_argument(
         "--max_retries",
         type=int,
         default=3,
-        help="最大重试次数（默认：3）",
+        help="Maximum number of retries (default: 3)",
     )
     p1_parser.add_argument(
         "--resume",
         action="store_true",
         default=True,
-        help="断点续传（默认开启）",
+        help="Resume from breakpoint (enabled by default)",
     )
     p1_parser.add_argument(
         "--no-resume",
         dest="resume",
         action="store_false",
-        help="禁用断点续传，从头开始",
+        help="Disable breakpoint resume, start from scratch",
     )
     p1_parser.set_defaults(func=cmd_pipeline1)
     
-    # 链路二
+    # Pipeline 2
     p2_parser = subparsers.add_parser(
         "pipeline2",
-        help="链路二：用户优化（单张图片）",
+        help="Pipeline 2: User Optimization (Single Image)",
     )
     p2_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     p2_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="原始总结",
+        help="Original summary",
     )
     p2_parser.add_argument(
         "--max_retries",
         type=int,
         default=3,
-        help="最大重试次数（默认：3）",
+        help="Maximum number of retries (default: 3)",
     )
     p2_parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="输出文件路径（可选）",
+        help="Output file path (optional)",
     )
     p2_parser.set_defaults(func=cmd_pipeline2)
     
-    # 链路三
+    # Pipeline 3
     p3_parser = subparsers.add_parser(
         "pipeline3",
-        help="链路三：直接评分（单张图片）",
+        help="Pipeline 3: Direct Scoring (Single Image)",
     )
     p3_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     p3_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="待评估的总结",
+        help="Summary to be evaluated",
     )
     p3_parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="输出文件路径（可选）",
+        help="Output file path (optional)",
     )
     p3_parser.set_defaults(func=cmd_pipeline3)
     
@@ -195,4 +195,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

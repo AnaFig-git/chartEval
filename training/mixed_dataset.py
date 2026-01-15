@@ -1,6 +1,6 @@
 """
-混合数据集 - 用于知识蒸馏训练
-支持打分数据和改进数据的混合采样
+Mixed Dataset - For Knowledge Distillation Training
+Supports mixed sampling of scoring data and refinement data
 """
 import json
 import random
@@ -14,10 +14,10 @@ from torch.utils.data import Dataset
 
 class MixedFigureDataset(Dataset):
     """
-    混合数据集：结合打分数据和改进数据
+    Mixed Dataset: Combines scoring data and refinement data
     
-    用于知识蒸馏训练，每个样本会标记其类型（score/refine），
-    以便在训练时计算不同的损失。
+    Used for knowledge distillation training, each sample is labeled with its type (score/refine),
+    to calculate different losses during training.
     """
     
     def __init__(
@@ -33,40 +33,40 @@ class MixedFigureDataset(Dataset):
     ):
         """
         Args:
-            score_data_path: 打分数据路径 (training_data_l2.json)
-            refine_data_path: 改进数据路径 (training_data_l1.json)
-            processor: 模型处理器
-            score_ratio: 打分数据在混合数据中的比例 (0-1)
-            max_pixels: 图片最大像素数
-            min_pixels: 图片最小像素数
-            shuffle: 是否打乱数据
-            seed: 随机种子
+            score_data_path: Path to scoring data (training_data_l2.json)
+            refine_data_path: Path to refinement data (training_data_l1.json)
+            processor: Model processor
+            score_ratio: Ratio of scoring data in mixed data (0-1)
+            max_pixels: Maximum number of pixels for images
+            min_pixels: Minimum number of pixels for images
+            shuffle: Whether to shuffle data
+            seed: Random seed
         """
         self.processor = processor
         self.max_pixels = max_pixels
         self.min_pixels = min_pixels
         self.score_ratio = score_ratio
         
-        # 加载数据
+        # Load data
         with open(score_data_path, "r", encoding="utf-8") as f:
             self.score_data = json.load(f)
         with open(refine_data_path, "r", encoding="utf-8") as f:
             self.refine_data = json.load(f)
             
-        print(f"加载打分数据: {len(self.score_data)} 条")
-        print(f"加载改进数据: {len(self.refine_data)} 条")
+        print(f"Loaded scoring data: {len(self.score_data)} entries")
+        print(f"Loaded refinement data: {len(self.refine_data)} entries")
         
-        # 构建混合数据集
+        # Build mixed dataset
         self.data = self._build_mixed_dataset(shuffle, seed)
-        print(f"混合数据集总计: {len(self.data)} 条")
-        print(f"  - 打分数据: {sum(1 for d in self.data if d['task_type'] == 'score')} 条")
-        print(f"  - 改进数据: {sum(1 for d in self.data if d['task_type'] == 'refine')} 条")
+        print(f"Total mixed dataset: {len(self.data)} entries")
+        print(f"  - Scoring data: {sum(1 for d in self.data if d['task_type'] == 'score')} entries")
+        print(f"  - Refinement data: {sum(1 for d in self.data if d['task_type'] == 'refine')} entries")
         
     def _build_mixed_dataset(self, shuffle: bool, seed: int) -> List[Dict]:
-        """构建混合数据集"""
+        """Build mixed dataset"""
         mixed_data = []
         
-        # 为每条数据添加任务类型标记
+        # Add task type label to each data entry
         for item in self.score_data:
             mixed_data.append({
                 **item,
@@ -79,17 +79,17 @@ class MixedFigureDataset(Dataset):
                 "task_type": "refine"
             })
         
-        # 根据比例采样
-        # 计算目标数量
+        # Sample according to ratio
+        # Calculate target quantities
         total_score = len(self.score_data)
         total_refine = len(self.refine_data)
         
         if self.score_ratio > 0 and self.score_ratio < 1:
-            # 根据比例调整
-            # 假设我们想要的混合比例是 score_ratio : (1 - score_ratio)
-            # 选择一个合适的基准
+            # Adjust according to ratio
+            # Assume the desired mixed ratio is score_ratio : (1 - score_ratio)
+            # Select an appropriate baseline
             target_score = int(total_refine * self.score_ratio / (1 - self.score_ratio))
-            target_score = min(target_score, total_score)  # 不能超过实际数量
+            target_score = min(target_score, total_score)  # Cannot exceed actual quantity
             
             random.seed(seed)
             score_samples = random.sample(
@@ -116,14 +116,14 @@ class MixedFigureDataset(Dataset):
         conversations = item["conversations"]
         task_type = item["task_type"]
         
-        # 加载图片
+        # Load image
         try:
             image = Image.open(image_path).convert("RGB")
         except Exception as e:
-            print(f"加载图片失败 {image_path}: {e}")
+            print(f"Failed to load image {image_path}: {e}")
             image = Image.new("RGB", (224, 224), color="white")
             
-        # 构建消息
+        # Build messages
         user_content = conversations[0]["content"]
         assistant_content = conversations[1]["content"]
         
@@ -143,7 +143,7 @@ class MixedFigureDataset(Dataset):
             },
         ]
         
-        # 处理输入
+        # Process input
         inputs = self.processor.apply_chat_template(
             messages,
             tokenize=True,
@@ -154,7 +154,7 @@ class MixedFigureDataset(Dataset):
             min_pixels=self.min_pixels,
         )
         
-        # 移除 batch 维度
+        # Remove batch dimension
         input_ids = inputs["input_ids"].squeeze(0)
         attention_mask = inputs["attention_mask"].squeeze(0)
         labels = input_ids.clone()
@@ -163,10 +163,10 @@ class MixedFigureDataset(Dataset):
             "input_ids": input_ids,
             "attention_mask": attention_mask,
             "labels": labels,
-            "task_type": task_type,  # 关键：标记任务类型
+            "task_type": task_type,  # Key: label task type
         }
         
-        # 处理视觉特征
+        # Process visual features
         if "pixel_values" in inputs:
             pixel_values = inputs["pixel_values"]
             if pixel_values.dim() == 5:
@@ -184,9 +184,9 @@ class MixedFigureDataset(Dataset):
 
 def mixed_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    数据批处理函数 - 动态 padding，保留任务类型信息
+    Data collation function - Dynamic padding, preserves task type information
     """
-    # 找到最大长度
+    # Find maximum length
     max_len = max(item["input_ids"].size(0) for item in batch)
     
     input_ids_list = []
@@ -225,10 +225,10 @@ def mixed_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
         "input_ids": torch.stack(input_ids_list),
         "attention_mask": torch.stack(attention_mask_list),
         "labels": torch.stack(labels_list),
-        "task_types": task_types,  # 保留任务类型列表
+        "task_types": task_types,  # Preserve task type list
     }
     
-    # 处理视觉特征
+    # Process visual features
     if "pixel_values" in batch[0] and batch[0]["pixel_values"] is not None:
         pixel_values = torch.cat([item["pixel_values"] for item in batch], dim=0)
         result["pixel_values"] = pixel_values
@@ -242,8 +242,8 @@ def mixed_collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 class ScoreOnlyDataset(Dataset):
     """
-    仅打分数据集 - 用于教师模型的蒸馏
-    只包含打分任务的数据，用于计算蒸馏损失
+    Scoring-only Dataset - For teacher model distillation
+    Contains only scoring task data, used to calculate distillation loss
     """
     
     def __init__(
@@ -255,10 +255,10 @@ class ScoreOnlyDataset(Dataset):
     ):
         """
         Args:
-            data_path: 打分数据路径
-            processor: 模型处理器
-            max_pixels: 图片最大像素数
-            min_pixels: 图片最小像素数
+            data_path: Path to scoring data
+            processor: Model processor
+            max_pixels: Maximum number of pixels for images
+            min_pixels: Minimum number of pixels for images
         """
         with open(data_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
@@ -279,7 +279,7 @@ class ScoreOnlyDataset(Dataset):
         try:
             image = Image.open(image_path).convert("RGB")
         except Exception as e:
-            print(f"加载图片失败 {image_path}: {e}")
+            print(f"Failed to load image {image_path}: {e}")
             image = Image.new("RGB", (224, 224), color="white")
             
         user_content = conversations[0]["content"]
@@ -334,4 +334,3 @@ class ScoreOnlyDataset(Dataset):
             result["image_grid_thw"] = image_grid_thw
             
         return result
-

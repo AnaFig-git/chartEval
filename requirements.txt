@@ -1,9 +1,6 @@
-# PyTorch GPU 版本 (CUDA 11.8) - 必须从官方源安装
 --extra-index-url https://download.pytorch.org/whl/cu118
 torch>=2.0.0
 torchvision>=0.15.0
-
-# 其他依赖 - 可从阿里云镜像安装
 tqdm>=4.65.0
 transformers>=4.45.0
 accelerate>=0.25.0

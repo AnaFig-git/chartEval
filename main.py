@@ -1,34 +1,34 @@
 #!/usr/bin/env python3
 """
-图表总结评估系统 - 主入口
+Figure Summary Evaluation System - Main Entry Point
 
-功能：
-- 功能一：批量图片总结生成
-- 功能二：五维度评分 + improved_summary
-- 功能三：仅五维度评分
+Features:
+- Feature 1: Batch Image Summary Generation
+- Feature 2: Five-Dimensional Scoring + improved_summary
+- Feature 3: Five-Dimensional Scoring Only
 
-链路：
-- 链路一：构建数据集
-- 链路二：用户优化
-- 链路三：直接评分
+Pipelines:
+- Pipeline 1: Build Dataset
+- Pipeline 2: User Optimization
+- Pipeline 3: Direct Scoring
 
-微调：
-- 方案一 (l-1)：含 improved_summary
-- 方案二 (l-2)：不含 improved_summary
+Fine-tuning:
+- Scheme 1 (l-1): Includes improved_summary
+- Scheme 2 (l-2): Excludes improved_summary
 """
 import sys
 import os
 
 # ============================================================
-# 重要：在任何其他 import 之前设置 GPU
-# 某些库（如 transformers）在 import 时会初始化 CUDA 上下文
-# 必须在此之前设置 CUDA_VISIBLE_DEVICES
+# Important: Set GPU before any other imports
+# Some libraries (e.g., transformers) initialize CUDA context on import
+# Must set CUDA_VISIBLE_DEVICES before this
 # ============================================================
 def _setup_gpu_early():
-    """在任何 CUDA 相关库导入之前设置 GPU"""
+    """Set GPU before importing any CUDA-related libraries"""
     gpu_id = None
     
-    # 检查命令行中是否有 --gpu 参数
+    # Check if --gpu argument exists in command line
     for i, arg in enumerate(sys.argv):
         if arg == '--gpu' and i + 1 < len(sys.argv):
             gpu_id = sys.argv[i + 1]
@@ -38,27 +38,27 @@ def _setup_gpu_early():
             break
     
     if gpu_id is not None:
-        # 重要：设置设备顺序为 PCI 总线顺序，确保与 nvidia-smi 一致
+        # Important: Set device order to PCI bus order to match nvidia-smi
         os.environ['CUDA_DEVICE_ORDER'] = 'PCI_BUS_ID'
         
-        # 清除可能存在的旧设置
+        # Clear possible old settings
         if 'CUDA_VISIBLE_DEVICES' in os.environ:
-            print(f"[GPU] 清除旧设置: CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
+            print(f"[GPU] Clearing old setting: CUDA_VISIBLE_DEVICES={os.environ['CUDA_VISIBLE_DEVICES']}")
         
-        # 设置新的 GPU
+        # Set new GPU
         os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
-        print(f"[GPU] 设置 CUDA_DEVICE_ORDER=PCI_BUS_ID")
-        print(f"[GPU] 设置 CUDA_VISIBLE_DEVICES={gpu_id}")
+        print(f"[GPU] Set CUDA_DEVICE_ORDER=PCI_BUS_ID")
+        print(f"[GPU] Set CUDA_VISIBLE_DEVICES={gpu_id}")
         
-        # 验证设置
+        # Verify settings
         import torch
         if torch.cuda.is_available():
-            print(f"[GPU] PyTorch 可见 GPU 数量: {torch.cuda.device_count()}")
+            print(f"[GPU] Number of PyTorch visible GPUs: {torch.cuda.device_count()}")
             for i in range(torch.cuda.device_count()):
                 props = torch.cuda.get_device_properties(i)
-                print(f"[GPU] cuda:{i} = {props.name}, 显存: {props.total_memory / 1024**3:.1f} GB")
+                print(f"[GPU] cuda:{i} = {props.name}, Memory: {props.total_memory / 1024**3:.1f} GB")
         else:
-            print("[GPU] 警告: CUDA 不可用!")
+            print("[GPU] Warning: CUDA is not available!")
 
 _setup_gpu_early()
 # ============================================================
@@ -66,7 +66,7 @@ _setup_gpu_early()
 import argparse
 import json
 
-# 添加项目路径
+# Add project path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from src.feature1_summary import batch_generate_summaries, generate_summary
@@ -81,8 +81,8 @@ from src.utils import save_to_jsonl, get_total_score
 
 
 def cmd_feature1(args):
-    """功能一：批量图片总结生成"""
-    print("执行功能一：批量图片总结生成")
+    """Feature 1: Batch Image Summary Generation"""
+    print("Executing Feature 1: Batch Image Summary Generation")
     
     results = batch_generate_summaries(
         image_folder=args.image_folder,
@@ -97,14 +97,14 @@ def cmd_feature1(args):
         resume=args.resume,
     )
     
-    print(f"完成，共 {len(results)} 条结果")
+    print(f"Completed, total {len(results)} results")
     if args.output:
-        print(f"结果已保存到: {args.output}")
+        print(f"Results saved to: {args.output}")
 
 
 def cmd_feature2(args):
-    """功能二：五维度评分 + improved_summary"""
-    print("执行功能二：五维度评分 + improved_summary")
+    """Feature 2: Five-Dimensional Scoring + improved_summary"""
+    print("Executing Feature 2: Five-Dimensional Scoring + improved_summary")
     
     result = evaluate_with_improvement(
         image_path=args.image,
@@ -119,14 +119,14 @@ def cmd_feature2(args):
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Results saved to: {args.output}")
     else:
-        print("评估失败")
+        print("Evaluation failed")
 
 
 def cmd_feature3(args):
-    """功能三：仅五维度评分"""
-    print("执行功能三：仅五维度评分")
+    """Feature 3: Five-Dimensional Scoring Only"""
+    print("Executing Feature 3: Five-Dimensional Scoring Only")
     
     result = score_only(
         image_path=args.image,
@@ -140,17 +140,17 @@ def cmd_feature3(args):
     if result:
         print(json.dumps(result, ensure_ascii=False, indent=2))
         total = get_total_score(result)
-        print(f"总分: {total}/10")
+        print(f"Total Score: {total}/10")
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Results saved to: {args.output}")
     else:
-        print("评分失败")
+        print("Scoring failed")
 
 
 def cmd_pipeline1(args):
-    """链路一：构建数据集"""
-    print("执行链路一：构建数据集")
+    """Pipeline 1: Build Dataset"""
+    print("Executing Pipeline 1: Build Dataset")
     
     success, total = pipeline1_build_dataset(
         image_folder=args.image_folder,
@@ -166,12 +166,12 @@ def cmd_pipeline1(args):
         resume=args.resume,
     )
     
-    print(f"完成: 成功 {success}/{total}")
+    print(f"Completed: Success {success}/{total}")
 
 
 def cmd_pipeline2(args):
-    """链路二：用户优化"""
-    print("执行链路二：用户优化")
+    """Pipeline 2: User Optimization"""
+    print("Executing Pipeline 2: User Optimization")
     
     result = pipeline2_user_optimize(
         image_path=args.image,
@@ -182,18 +182,18 @@ def cmd_pipeline2(args):
     )
     
     if result:
-        print("\n最终结果:")
+        print("\nFinal Result:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Results saved to: {args.output}")
     else:
-        print("优化失败")
+        print("Optimization failed")
 
 
 def cmd_pipeline3(args):
-    """链路三：直接评分"""
-    print("执行链路三：直接评分")
+    """Pipeline 3: Direct Scoring"""
+    print("Executing Pipeline 3: Direct Scoring")
     
     result = pipeline3_direct_score(
         image_path=args.image,
@@ -203,23 +203,23 @@ def cmd_pipeline3(args):
     )
     
     if result:
-        print("\n评分结果:")
+        print("\nScoring Result:")
         print(json.dumps(result, ensure_ascii=False, indent=2))
         if args.output:
             save_to_jsonl(result, args.output)
-            print(f"结果已保存到: {args.output}")
+            print(f"Results saved to: {args.output}")
     else:
-        print("评分失败")
+        print("Scoring failed")
 
 
 def cmd_train(args):
-    """执行 LoRA 微调"""
+    """Execute LoRA Fine-tuning"""
     from training.train_lora import train_lora
     from training.data_format import convert_to_training_format
     
-    # 如果需要先转换数据格式
+    # Convert data format if needed
     if args.raw_data:
-        print("转换数据格式...")
+        print("Converting data format...")
         training_data_path = args.data_path.replace(".jsonl", "_training.json")
         convert_to_training_format(
             input_path=args.raw_data,
@@ -228,7 +228,7 @@ def cmd_train(args):
         )
         args.data_path = training_data_path
     
-    # 设置输出目录
+    # Set output directory
     if not args.output_dir:
         args.output_dir = f"./lora_weights/{args.scheme}"
     
@@ -248,278 +248,278 @@ def cmd_train(args):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="图表总结评估系统",
+        description="Figure Summary Evaluation System",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     
-    subparsers = parser.add_subparsers(dest="command", help="可用命令")
+    subparsers = parser.add_subparsers(dest="command", help="Available commands")
     
-    # 通用参数
+    # Common arguments
     common_parser = argparse.ArgumentParser(add_help=False)
     common_parser.add_argument(
         "--gpu",
         type=str,
         default=None,
-        help="指定使用的 GPU ID（如 0, 1, 2...），会设置 CUDA_VISIBLE_DEVICES",
+        help="Specify GPU ID to use (e.g., 0, 1, 2...), sets CUDA_VISIBLE_DEVICES",
     )
     common_parser.add_argument(
         "--model_path",
         type=str,
         default="./Qwen3-VL-8B-Instruct",
-        help="模型路径",
+        help="Model path",
     )
     common_parser.add_argument(
         "--lora_path",
         type=str,
         default=None,
-        help="LoRA 权重路径",
+        help="LoRA weights path",
     )
     common_parser.add_argument(
         "--temperature",
         type=float,
         default=0.7,
-        help="生成温度",
+        help="Generation temperature",
     )
     common_parser.add_argument(
         "--top_p",
         type=float,
         default=0.9,
-        help="Top-p 采样",
+        help="Top-p sampling",
     )
     common_parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="输出文件路径",
+        help="Output file path",
     )
     
-    # 功能一
+    # Feature 1
     f1_parser = subparsers.add_parser(
         "feature1",
         parents=[common_parser],
-        help="功能一：批量图片总结生成",
+        help="Feature 1: Batch Image Summary Generation",
     )
     f1_parser.add_argument(
         "--image_folder",
         type=str,
         required=True,
-        help="图片文件夹路径",
+        help="Image folder path",
     )
     f1_parser.add_argument(
         "--low_ratio",
         type=float,
         default=0.3,
-        help="低质量比例",
+        help="Low-quality ratio",
     )
     f1_parser.add_argument(
         "--medium_ratio",
         type=float,
         default=0.3,
-        help="中质量比例",
+        help="Medium-quality ratio",
     )
     f1_parser.add_argument(
         "--high_ratio",
         type=float,
         default=0.4,
-        help="高质量比例",
+        help="High-quality ratio",
     )
     f1_parser.add_argument(
         "--resume",
         action="store_true",
         default=True,
-        help="断点续传（默认开启）",
+        help="Resume from breakpoint (enabled by default)",
     )
     f1_parser.add_argument(
         "--no-resume",
         dest="resume",
         action="store_false",
-        help="禁用断点续传，从头开始",
+        help="Disable breakpoint resume, start from scratch",
     )
     f1_parser.set_defaults(func=cmd_feature1)
     
-    # 功能二
+    # Feature 2
     f2_parser = subparsers.add_parser(
         "feature2",
         parents=[common_parser],
-        help="功能二：五维度评分 + improved_summary",
+        help="Feature 2: Five-Dimensional Scoring + improved_summary",
     )
     f2_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     f2_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="原始总结",
+        help="Original summary",
     )
     f2_parser.set_defaults(func=cmd_feature2)
     
-    # 功能三
+    # Feature 3
     f3_parser = subparsers.add_parser(
         "feature3",
         parents=[common_parser],
-        help="功能三：仅五维度评分",
+        help="Feature 3: Five-Dimensional Scoring Only",
     )
     f3_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     f3_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="待评估的总结",
+        help="Summary to be evaluated",
     )
     f3_parser.set_defaults(func=cmd_feature3)
     
-    # 链路一
+    # Pipeline 1
     p1_parser = subparsers.add_parser(
         "pipeline1",
         parents=[common_parser],
-        help="链路一：构建数据集",
+        help="Pipeline 1: Build Dataset",
     )
     p1_parser.add_argument(
         "--image_folder",
         type=str,
         required=True,
-        help="图片文件夹路径",
+        help="Image folder path",
     )
     p1_parser.add_argument(
         "--low_ratio",
         type=float,
         default=0.3,
-        help="低质量比例",
+        help="Low-quality ratio",
     )
     p1_parser.add_argument(
         "--medium_ratio",
         type=float,
         default=0.3,
-        help="中质量比例",
+        help="Medium-quality ratio",
     )
     p1_parser.add_argument(
         "--high_ratio",
         type=float,
         default=0.4,
-        help="高质量比例",
+        help="High-quality ratio",
     )
     p1_parser.add_argument(
         "--max_retries",
         type=int,
         default=3,
-        help="最大重试次数",
+        help="Maximum number of retries",
     )
     p1_parser.add_argument(
         "--lora_path_f2",
         type=str,
         default=None,
-        help="功能二（评分+改进总结）使用的 LoRA 权重路径，如 ./lora_weights/l-1",
+        help="LoRA weights path for Feature 2 (Scoring + Improved Summary), e.g., ./lora_weights/l-1",
     )
     p1_parser.add_argument(
         "--lora_path_f3",
         type=str,
         default=None,
-        help="功能三（仅评分）使用的 LoRA 权重路径，如 ./lora_weights/l-2",
+        help="LoRA weights path for Feature 3 (Scoring Only), e.g., ./lora_weights/l-2",
     )
     p1_parser.add_argument(
         "--resume",
         action="store_true",
         default=True,
-        help="断点续传（默认开启）",
+        help="Resume from breakpoint (enabled by default)",
     )
     p1_parser.add_argument(
         "--no-resume",
         dest="resume",
         action="store_false",
-        help="禁用断点续传，从头开始",
+        help="Disable breakpoint resume, start from scratch",
     )
     p1_parser.set_defaults(func=cmd_pipeline1)
     
-    # 链路二
+    # Pipeline 2
     p2_parser = subparsers.add_parser(
         "pipeline2",
         parents=[common_parser],
-        help="链路二：用户优化",
+        help="Pipeline 2: User Optimization",
     )
     p2_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     p2_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="原始总结",
+        help="Original summary",
     )
     p2_parser.add_argument(
         "--max_retries",
         type=int,
         default=3,
-        help="最大重试次数",
+        help="Maximum number of retries",
     )
     p2_parser.set_defaults(func=cmd_pipeline2)
     
-    # 链路三
+    # Pipeline 3
     p3_parser = subparsers.add_parser(
         "pipeline3",
         parents=[common_parser],
-        help="链路三：直接评分",
+        help="Pipeline 3: Direct Scoring",
     )
     p3_parser.add_argument(
         "--image",
         type=str,
         required=True,
-        help="图片路径",
+        help="Image path",
     )
     p3_parser.add_argument(
         "--summary",
         type=str,
         required=True,
-        help="待评估的总结",
+        help="Summary to be evaluated",
     )
     p3_parser.set_defaults(func=cmd_pipeline3)
     
-    # 微调
+    # Fine-tuning
     train_parser = subparsers.add_parser(
         "train",
-        help="LoRA 微调",
+        help="LoRA Fine-tuning",
     )
     train_parser.add_argument(
         "--model_path",
         type=str,
         default="./Qwen3-VL-8B-Instruct",
-        help="基础模型路径",
+        help="Base model path",
     )
     train_parser.add_argument(
         "--data_path",
         type=str,
         required=True,
-        help="训练数据路径（JSON 格式）",
+        help="Training data path (JSON format)",
     )
     train_parser.add_argument(
         "--raw_data",
         type=str,
         default=None,
-        help="原始 JSONL 数据路径（如提供则先转换格式）",
+        help="Raw JSONL data path (convert format first if provided)",
     )
     train_parser.add_argument(
         "--output_dir",
         type=str,
         default=None,
-        help="输出目录",
+        help="Output directory",
     )
     train_parser.add_argument(
         "--scheme",
         type=str,
         choices=["l-1", "l-2"],
         default="l-1",
-        help="微调方案",
+        help="Fine-tuning scheme",
     )
     train_parser.add_argument(
         "--lora_r",
@@ -537,31 +537,31 @@ def main():
         "--learning_rate",
         type=float,
         default=2e-4,
-        help="学习率",
+        help="Learning rate",
     )
     train_parser.add_argument(
         "--num_epochs",
         type=int,
         default=3,
-        help="训练轮数",
+        help="Number of training epochs",
     )
     train_parser.add_argument(
         "--batch_size",
         type=int,
         default=1,
-        help="批次大小",
+        help="Batch size",
     )
     train_parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
         default=8,
-        help="梯度累积步数",
+        help="Gradient accumulation steps",
     )
     train_parser.add_argument(
         "--resume_lora_path",
         type=str,
         default=None,
-        help="现有 LoRA 权重路径（用于增量微调，在已有权重基础上继续训练）",
+        help="Existing LoRA weights path (for incremental fine-tuning, continue training on existing weights)",
     )
     train_parser.set_defaults(func=cmd_train)
     
@@ -576,4 +576,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

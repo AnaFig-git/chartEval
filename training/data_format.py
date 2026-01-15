@@ -1,12 +1,12 @@
 """
-数据格式转换 - 将 JSONL 数据转换为训练格式
+Data Format Conversion - Convert JSONL data to training format
 """
 import json
 from typing import List, Dict, Any
 from pathlib import Path
 
 
-# 功能二的提示词模板（包含 improved_summary）
+
 PROMPT_TEMPLATE_WITH_IMPROVEMENT = '''You are a professional expert in figure-summary evaluation, skilled at conducting strict five-dimension evaluations based on multimodal input (image + text).
 
 Based on the input "figure image" and "original summary,"
@@ -71,7 +71,7 @@ you must evaluate the summary along the following five dimensions with a strict 
 3. The output format must include `<evaluation>` tags containing scores, reasons, and weights, followed by `<modification>` tags containing the improved_summary.'''
 
 
-# 功能三的提示词模板（不包含 improved_summary）
+
 PROMPT_TEMPLATE_SCORE_ONLY = '''You are a professional expert in figure-summary evaluation, skilled at conducting strict five-dimension evaluations based on multimodal input (image + text).
 
 Based on the input "figure image" and "original summary,"
@@ -129,7 +129,7 @@ you must evaluate the summary along the following five dimensions with a strict 
 
 
 def load_jsonl(input_path: str) -> List[Dict[str, Any]]:
-    """加载 JSONL 文件"""
+    """Load JSONL file"""
     data = []
     with open(input_path, "r", encoding="utf-8") as f:
         for line in f:
@@ -141,8 +141,8 @@ def load_jsonl(input_path: str) -> List[Dict[str, Any]]:
 
 def format_output_json(output: Dict[str, Any], include_improved_summary: bool = True) -> str:
     """
-    格式化输出为 <evaluation>...</evaluation> 格式
-    如果 include_improved_summary 为 True，还会添加 <modification>...</modification> 部分
+    Format output into <evaluation>...</evaluation> format
+    If include_improved_summary is True, also add the <modification>...</modification> section
     """
     evaluation_result = {
         "scores": output.get("scores", {}),
@@ -165,12 +165,12 @@ def convert_to_training_format(
     include_improved_summary: bool = True,
 ):
     """
-    将 JSONL 数据转换为训练格式
+    Convert JSONL data to training format
     
     Args:
-        input_path: 输入 JSONL 文件路径
-        output_path: 输出训练数据文件路径
-        include_improved_summary: 是否包含 improved_summary
+        input_path: Input JSONL file path
+        output_path: Output training data file path
+        include_improved_summary: Whether to include improved_summary
     """
     data = load_jsonl(input_path)
     
@@ -187,10 +187,10 @@ def convert_to_training_format(
         original_summary = item.get("original_summary", "")
         output = item.get("output", {})
         
-        # 构建 prompt
+        
         prompt = prompt_template.format(summary=original_summary)
         
-        # 构建 response
+        
         response = format_output_json(output, include_improved_summary)
         
         training_item = {
@@ -209,12 +209,12 @@ def convert_to_training_format(
         
         training_data.append(training_item)
         
-    # 保存
+    
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(training_data, f, ensure_ascii=False, indent=2)
         
-    print(f"转换完成: {len(training_data)} 条数据")
-    print(f"输出文件: {output_path}")
+    print(f"Conversion completed: {len(training_data)} data entries")
+    print(f"Output file: {output_path}")
 
 
 def generate_training_files(
@@ -222,25 +222,25 @@ def generate_training_files(
     output_dir: str = "./data/output",
 ):
     """
-    一次性生成两个训练数据文件
+    Generate two training data files at once
     
     Args:
-        input_path: 输入 JSONL 文件路径
-        output_dir: 输出目录路径
+        input_path: Input JSONL file path
+        output_dir: Output directory path
         
-    生成文件:
-        - training_data_l1.json: 包含 improved_summary (用于 l-1 方案)
-        - training_data_l2.json: 不包含 improved_summary (用于 l-2 方案)
+    Generated files:
+        - training_data_l1.json: Includes improved_summary (for l-1 scheme)
+        - training_data_l2.json: Excludes improved_summary (for l-2 scheme)
     """
-    # 确保输出目录存在
+    
     output_dir_path = Path(output_dir)
     output_dir_path.mkdir(parents=True, exist_ok=True)
     
-    # 加载数据（只加载一次）
-    data = load_jsonl(input_path)
-    print(f"加载数据: {len(data)} 条记录")
     
-    # 生成 l-1 训练数据 (包含 improved_summary)
+    data = load_jsonl(input_path)
+    print(f"Loaded data: {len(data)} records")
+    
+    
     l1_output_path = output_dir_path / "training_data_l1.json"
     l1_training_data = []
     
@@ -262,9 +262,9 @@ def generate_training_files(
     
     with open(l1_output_path, "w", encoding="utf-8") as f:
         json.dump(l1_training_data, f, ensure_ascii=False, indent=2)
-    print(f"生成 l-1 训练数据: {l1_output_path} ({len(l1_training_data)} 条)")
+    print(f"Generated l-1 training data: {l1_output_path} ({len(l1_training_data)} entries)")
     
-    # 生成 l-2 训练数据 (不包含 improved_summary)
+    
     l2_output_path = output_dir_path / "training_data_l2.json"
     l2_training_data = []
     
@@ -286,11 +286,11 @@ def generate_training_files(
     
     with open(l2_output_path, "w", encoding="utf-8") as f:
         json.dump(l2_training_data, f, ensure_ascii=False, indent=2)
-    print(f"生成 l-2 训练数据: {l2_output_path} ({len(l2_training_data)} 条)")
+    print(f"Generated l-2 training data: {l2_output_path} ({len(l2_training_data)} entries)")
     
-    print("\n训练数据生成完成!")
-    print(f"  - l-1 方案 (含 improved_summary): {l1_output_path}")
-    print(f"  - l-2 方案 (不含 improved_summary): {l2_output_path}")
+    print("\nTraining data generation completed!")
+    print(f"  - l-1 scheme (includes improved_summary): {l1_output_path}")
+    print(f"  - l-2 scheme (excludes improved_summary): {l2_output_path}")
     
     return str(l1_output_path), str(l2_output_path)
 
@@ -298,36 +298,35 @@ def generate_training_files(
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="数据格式转换")
-    parser.add_argument("--input", required=True, help="输入 JSONL 文件路径")
-    parser.add_argument("--output", default=None, help="输出训练数据文件路径（单文件模式）")
-    parser.add_argument("--output-dir", default="./data/output", help="输出目录（批量模式）")
+    parser = argparse.ArgumentParser(description="Data Format Conversion")
+    parser.add_argument("--input", required=True, help="Input JSONL file path")
+    parser.add_argument("--output", default=None, help="Output training data file path (single file mode)")
+    parser.add_argument("--output-dir", default="./data/output", help="Output directory (batch mode)")
     parser.add_argument(
         "--no-improved-summary",
         action="store_true",
-        help="不包含 improved_summary（用于微调方案二）",
+        help="Exclude improved_summary (for fine-tuning scheme two)",
     )
     parser.add_argument(
         "--generate-both",
         action="store_true",
-        help="一次性生成两个训练数据文件（l-1 和 l-2）",
+        help="Generate two training data files at once (l-1 and l-2)",
     )
     
     args = parser.parse_args()
     
     if args.generate_both:
-        # 批量生成两个文件
+       
         generate_training_files(
             input_path=args.input,
             output_dir=args.output_dir,
         )
     else:
-        # 单文件模式
+        
         if not args.output:
-            parser.error("单文件模式需要指定 --output 参数")
+            parser.error("Single file mode requires specifying the --output parameter")
         convert_to_training_format(
             input_path=args.input,
             output_path=args.output,
             include_improved_summary=not args.no_improved_summary,
         )
-

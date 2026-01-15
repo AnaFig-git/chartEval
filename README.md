@@ -6,8 +6,12 @@ This repository contains the code to use AgentGER from the paper [AgentGER: Towa
 *🤗 This codebase is released as Version v1.0. We are dedicated to its continuous improvement. If you have any questions or suggestions, you are welcome to open an issue or submit a pull request for new features or bug fixes.*
 ## 👋 Introduction
 Figure-to-text is a key task for assessing figure understanding capabilities of models. Existing approaches face two main challenges: the high cost of constructing high-quality data and the lack of fine-grained, interpretable evaluation aligned with human experts. Accordingly, we propose AgentGER, an agent framework that integrates capabilities of generation, evaluation, and refinement for figure-to-text. AgentGER includes a Generation Model that produces summaries with hierarchical quality levels, an Evaluation Model that performs multi-dimensional, human-aligned assessment with a Chain-of-Evaluation mechanism, and a Refinement Model that improves summaries based on evaluation feedback. We further construct a large-scale dataset with 11,000 summaries and 55,000 multi-dimensional scoring labels through a human–machine collaborative pipeline. Experiments show that AgentGER significantly outperforms all strong baselines, surpasses Gemini-3.0-Pro on evaluation benchmarks, and achieves performance comparable to human experts in both evaluation and refinement tasks.
+<p align="center">
+  <img src="System Architecture2.png"  />
+</p> 
+
 ## ⚙ System Architecture
-![alt text](image-1.png)
+![alt text](<System Architecture1.png>)
 ## 📄 Five-Dimensional Scoring Criteria
 | Dimension                  | Definition                 | 0 points               | 1 point              | 2 points             |
 | -------------------------- | -------------------------- | ---------------------- | -------------------- | -------------------- |
@@ -26,6 +30,8 @@ Figure-to-text is a key task for assessing figure understanding capabilities of 
 - **Faithfulness must = 2**
 - No dimension score can be 0
 - Maximum 3 retries; discard if failed after retries
+## 📊 Dataset Details
+![alt text](dataset.png)
 ## 🚀 Quick Start
 ### Environment Requirements
 Python >= 3.8
@@ -40,7 +46,7 @@ pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements.txt
 ```
 ### Dataset Download
-Download image data from link: https://drive.google.com/file/d/xxxxxxxxxxxxxxxxx
+Due to anonymity policies and file size limitations, the complete dataset will be released after the paper is accepted.
 ### Model Preparation
 Place the Qwen3-VL-8B-Instruct or Qwen3-VL-30B model in the project root directory
 ```bash
@@ -59,8 +65,6 @@ project_root/
 │   └── l-2/                 # Scoring + Refinement (Stage 2)
 └── ...
 ```
-### Weights Download
-Download lora_weights from link: https://drive.google.com/file/d/xxxxxxxxxxxxxxxxxxxxxx
 ## 🚥 Framework Usage
 The overall workflow of the framework is divided into three stages: batch summary generation, single-sample scoring with refined summary generation, and re-scoring validation. The usage of scripts for each stage is as follows:
 ### Stage 1: Batch Summary Generation

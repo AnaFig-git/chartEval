@@ -1,7 +1,7 @@
 """
-功能一：批量图片总结生成
-输入一批图片，为每个图片输出一段总结，可调整低/中/高质量比例
-支持断点续传和实时保存
+Function 1: Batch Image Summary Generation
+Input a batch of images and generate a summary for each image, with adjustable ratios for low/medium/high quality levels
+Supports resuming from breakpoints and real-time saving
 """
 import random
 from typing import List, Dict, Any, Tuple, Optional
@@ -13,7 +13,7 @@ from .model_loader import get_model
 from .utils import get_image_files, save_to_jsonl, get_processed_images_from_step1
 
 
-# 五维度评分标准（用于提示词中）
+# Five-dimensional scoring criteria (used in prompts)
 SCORING_DIMENSIONS = """[Scoring Dimension Definitions]
 1. Faithfulness:  
    Ensure the summary strictly adheres to the chart's facts, including values, trends, proportions, and labels; no fabrication, distortion, or misinterpretation.  
@@ -45,7 +45,7 @@ SCORING_DIMENSIONS = """[Scoring Dimension Definitions]
    - 1: Professional expression is insufficient or slightly colloquial.  
    - 2: Accurate terminology, formal tone, and analytical depth."""
 
-# 不同质量等级的提示词
+# Prompts for different quality levels
 QUALITY_PROMPTS = {
     "low": f"""Analyze this figure and generate a summary that would score LOW quality (total score ≤ 5 out of 10) based on the following scoring dimensions:
 
@@ -88,30 +88,30 @@ def distribute_quality_levels(
     seed: int = 42,
 ) -> List[str]:
     """
-    根据比例分配每张图片的质量等级
+    Distribute quality levels for each image according to specified ratios
     
     Args:
-        num_images: 图片数量
-        low_ratio: 低质量比例
-        medium_ratio: 中质量比例
-        high_ratio: 高质量比例
-        seed: 随机种子（保证断点续传时分配一致）
+        num_images: Number of images
+        low_ratio: Ratio of low quality
+        medium_ratio: Ratio of medium quality
+        high_ratio: Ratio of high quality
+        seed: Random seed (ensures consistent distribution when resuming from breakpoints)
         
     Returns:
-        质量等级列表
+        List of quality levels
     """
-    # 归一化比例
+    # Normalize ratios
     total = low_ratio + medium_ratio + high_ratio
     low_ratio /= total
     medium_ratio /= total
     high_ratio /= total
     
-    # 计算每个等级的数量
+    # Calculate number of images for each level
     num_low = int(num_images * low_ratio)
     num_medium = int(num_images * medium_ratio)
     num_high = num_images - num_low - num_medium
     
-    # 生成等级列表并随机打乱（使用固定种子保证一致性）
+    # Generate level list and shuffle randomly (fixed seed for consistency)
     levels = ["low"] * num_low + ["medium"] * num_medium + ["high"] * num_high
     random.seed(seed)
     random.shuffle(levels)
@@ -128,18 +128,18 @@ def generate_summary(
     top_p: float = 0.9,
 ) -> str:
     """
-    为单张图片生成指定质量等级的总结
+    Generate a summary of specified quality level for a single image
     
     Args:
-        image_path: 图片路径
-        quality_level: 质量等级 (low/medium/high)
-        model_path: 模型路径
-        lora_path: LoRA 权重路径
-        temperature: 温度参数
-        top_p: top-p 采样参数
+        image_path: Path to image
+        quality_level: Quality level (low/medium/high)
+        model_path: Path to model
+        lora_path: Path to LoRA weights
+        temperature: Temperature parameter
+        top_p: Top-p sampling parameter
         
     Returns:
-        生成的总结
+        Generated summary
     """
     model = get_model(model_path=model_path, lora_path=lora_path)
     prompt = QUALITY_PROMPTS.get(quality_level, QUALITY_PROMPTS["medium"])
@@ -168,57 +168,57 @@ def batch_generate_summaries(
     resume: bool = True,
 ) -> List[Dict[str, Any]]:
     """
-    批量生成图片总结（支持断点续传和实时保存）
+    Batch generate image summaries (supports resuming from breakpoints and real-time saving)
     
     Args:
-        image_folder: 图片文件夹路径
-        low_ratio: 低质量比例
-        medium_ratio: 中质量比例
-        high_ratio: 高质量比例
-        model_path: 模型路径
-        lora_path: LoRA 权重路径
-        temperature: 温度参数
-        top_p: top-p 采样参数
-        output_path: 中间结果保存路径（用于断点续传）
-        resume: 是否从断点续传
+        image_folder: Path to image folder
+        low_ratio: Ratio of low quality
+        medium_ratio: Ratio of medium quality
+        high_ratio: Ratio of high quality
+        model_path: Path to model
+        lora_path: Path to LoRA weights
+        temperature: Temperature parameter
+        top_p: Top-p sampling parameter
+        output_path: Path to save intermediate results (for resuming from breakpoints)
+        resume: Whether to resume from breakpoints
         
     Returns:
-        生成结果列表，每项包含 {image_path, quality_level, summary}
+        List of generated results, each containing {image_path, quality_level, summary}
     """
-    # 获取所有图片
+    # Get all images
     image_paths = get_image_files(image_folder)
     
     if not image_paths:
-        print(f"警告: 文件夹 {image_folder} 中没有找到图片")
+        print(f"Warning: No images found in folder {image_folder}")
         return []
         
-    print(f"找到 {len(image_paths)} 张图片")
+    print(f"Found {len(image_paths)} images")
     
-    # 分配质量等级（使用固定种子保证断点续传时一致）
+    # Distribute quality levels (fixed seed for consistency when resuming)
     quality_levels = distribute_quality_levels(
         len(image_paths), low_ratio, medium_ratio, high_ratio, seed=42
     )
     
-    # 统计各等级数量
+    # Count levels
     level_counts = {"low": 0, "medium": 0, "high": 0}
     for level in quality_levels:
         level_counts[level] += 1
-    print(f"质量分布: 低={level_counts['low']}, 中={level_counts['medium']}, 高={level_counts['high']}")
+    print(f"Quality distribution: Low={level_counts['low']}, Medium={level_counts['medium']}, High={level_counts['high']}")
     
-    # 检查已处理的图片（断点续传）
+    # Check processed images (resume from breakpoints)
     processed_data = {}
     if resume and output_path:
         processed_data = get_processed_images_from_step1(output_path)
         if processed_data:
-            print(f"发现 {len(processed_data)} 张已处理的图片，将跳过这些图片")
+            print(f"Found {len(processed_data)} processed images, these will be skipped")
     
-    # 准备待处理的图片
+    # Prepare pending items
     results = []
     pending_items = []
     
     for image_path, quality_level in zip(image_paths, quality_levels):
         if image_path in processed_data:
-            # 已处理的直接加入结果
+            # Add processed items directly to results
             results.append({
                 "image_path": image_path,
                 "quality_level": processed_data[image_path]["quality_level"],
@@ -228,12 +228,12 @@ def batch_generate_summaries(
             pending_items.append((image_path, quality_level))
     
     if not pending_items:
-        print("所有图片已处理完成")
+        print("All images have been processed")
         return results
         
-    print(f"待处理: {len(pending_items)} 张图片")
+    print(f"Pending processing: {len(pending_items)} images")
     
-    # 生成总结（带进度条）
+    # Generate summaries (with progress bar)
     model = get_model(model_path=model_path, lora_path=lora_path)
     
     success_count = 0
@@ -241,8 +241,8 @@ def batch_generate_summaries(
     
     pbar = tqdm(
         pending_items,
-        desc="功能一：生成总结",
-        unit="张",
+        desc="Function 1: Generating summaries",
+        unit="image",
         ncols=100,
     )
     
@@ -267,23 +267,23 @@ def batch_generate_summaries(
             results.append(result)
             success_count += 1
             
-            # 实时保存到文件
+            # Save to file in real-time
             if output_path:
                 save_to_jsonl(result, output_path)
                 
         except Exception as e:
             error_count += 1
-            tqdm.write(f"错误处理 {Path(image_path).name}: {e}")
+            tqdm.write(f"Error processing {Path(image_path).name}: {e}")
             continue
             
-        # 更新进度条描述
+        # Update progress bar
         pbar.set_postfix({
-            "成功": success_count,
-            "失败": error_count,
-            "质量": quality_level,
+            "Success": success_count,
+            "Failed": error_count,
+            "Quality": quality_level,
         })
     
     pbar.close()
-    print(f"\n功能一完成: 成功 {success_count}, 失败 {error_count}, 总计 {len(results)}")
+    print(f"\nFunction 1 completed: Success {success_count}, Failed {error_count}, Total {len(results)}")
     
     return results

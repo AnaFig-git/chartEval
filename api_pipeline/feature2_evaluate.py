@@ -1,11 +1,11 @@
 """
-功能二：五维度评分 + improved_summary 生成（API 版本）
-输入图片和原始总结，输出评分、解释、权重和改进后的总结
+Feature 2: Five-dimensional Scoring + improved_summary Generation (API Version)
+Input an image and original summary, output scores, explanations, weights, and the improved summary
 """
 import sys
 import os
 
-# 添加项目根目录到路径
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import Dict, Any, Optional
@@ -14,7 +14,7 @@ from .api_model import get_model
 from src.utils import parse_final_json
 
 
-# 功能二的评估提示词（包含 improved_summary）- 与原版相同
+
 EVALUATE_PROMPT_WITH_IMPROVEMENT = '''You are a professional expert in figure-summary evaluation, skilled at conducting strict five-dimension evaluations based on multimodal input (image + text).
 
 Based on the input "figure image" and "original summary,"
@@ -87,24 +87,24 @@ def evaluate_with_improvement(
     do_sample: bool = True,
 ) -> Optional[Dict[str, Any]]:
     """
-    功能二：评估总结并生成改进版本（API 版本）
+    Feature 2: Evaluate Summary and Generate Improved Version (API Version)
     
     Args:
-        image_path: 图片路径
-        summary: 原始总结
-        temperature: 温度参数
-        top_p: top-p 采样参数
-        do_sample: 是否采样
+        image_path: Image path
+        summary: Original summary
+        temperature: Temperature parameter
+        top_p: Top-p sampling parameter
+        do_sample: Whether to use sampling
         
     Returns:
-        包含 scores, reasons, weights, improved_summary 的字典
+        Dictionary containing scores, reasons, weights, and improved_summary
     """
     model = get_model()
     
-    # 构建提示词
+    
     prompt = EVALUATE_PROMPT_WITH_IMPROVEMENT.format(summary=summary)
     
-    # 生成评估结果
+    
     output = model.generate(
         image_path=image_path,
         prompt=prompt,
@@ -115,15 +115,15 @@ def evaluate_with_improvement(
     )
     
     if not output:
-        print(f"警告: API 返回空结果")
+        print(f"Warning: API returned empty result")
         return None
     
-    # 解析结果
+    
     result = parse_final_json(output)
     
     if result is None:
-        print(f"警告: 无法解析评估结果")
-        print(f"原始输出: {output[:500]}...")
+        print(f"Warning: Failed to parse evaluation result")
+        print(f"Original output: {output[:500]}...")
         
     return result
 
@@ -135,24 +135,24 @@ def evaluate_with_improvement_retry(
     base_temperature: float = 0.7,
 ) -> Optional[Dict[str, Any]]:
     """
-    带重试机制的功能二（API 版本）
+    Feature 2 with Retry Mechanism (API Version)
     
-    每次重试增加 temperature 以获得不同结果
+    Increase temperature for each retry to get different results
     
     Args:
-        image_path: 图片路径
-        summary: 原始总结
-        max_retries: 最大重试次数
-        base_temperature: 基础温度
+        image_path: Image path
+        summary: Original summary
+        max_retries: Maximum number of retries
+        base_temperature: Base temperature
         
     Returns:
-        评估结果
+        Evaluation result
     """
     temperatures = [base_temperature, base_temperature + 0.1, base_temperature + 0.2]
     
     for i in range(max_retries):
         temp = temperatures[i] if i < len(temperatures) else base_temperature + 0.1 * i
-        print(f"功能二尝试 {i+1}/{max_retries} (temperature={temp:.2f})")
+        print(f"Feature 2 attempt {i+1}/{max_retries} (temperature={temp:.2f})")
         
         result = evaluate_with_improvement(
             image_path=image_path,
@@ -165,6 +165,5 @@ def evaluate_with_improvement_retry(
         if result is not None:
             return result
             
-    print("功能二所有重试均失败")
+    print("All retries for Feature 2 failed")
     return None
-

@@ -1,6 +1,6 @@
 """
-模型加载器 - 支持 Qwen3-VL-8B-Instruct 和 LoRA 动态加载
-参考: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+Model Loader - Supports Qwen3-VL-8B-Instruct and dynamic LoRA loading
+Reference: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
 """
 import os
 from typing import Optional, Union, List
@@ -13,7 +13,7 @@ from peft import PeftModel
 
 
 class Qwen3VLModel:
-    """Qwen3-VL 模型封装，支持 LoRA 动态加载"""
+    """Qwen3-VL Model Wrapper with dynamic LoRA loading support"""
     
     def __init__(
         self,
@@ -22,12 +22,12 @@ class Qwen3VLModel:
         torch_dtype: torch.dtype = torch.bfloat16,
     ):
         """
-        初始化模型
+        Initialize model
         
         Args:
-            model_path: 模型路径
-            device_id: GPU 设备 ID（如 0, 1, 2...），None 表示自动选择
-            torch_dtype: 模型精度
+            model_path: Model path
+            device_id: GPU device ID (e.g., 0, 1, 2...), None for automatic selection
+            torch_dtype: Model precision
         """
         self.model_path = model_path
         self.device_id = device_id
@@ -37,37 +37,37 @@ class Qwen3VLModel:
         self.current_lora_path = None
         
     def load_model(self):
-        """加载基础模型和处理器"""
+        """Load base model and processor"""
         if self.model is not None:
             return
             
-        print(f"正在加载模型: {self.model_path}")
+        print(f"Loading model: {self.model_path}")
         
-        # 检查可用 GPU 数量
+        # Check number of available GPUs
         num_gpus = torch.cuda.device_count()
-        print(f"可见 GPU 数量: {num_gpus}")
+        print(f"Number of visible GPUs: {num_gpus}")
         
-        # 确定设备映射
+        # Determine device mapping
         if self.device_id is not None:
-            # 明确指定 GPU 设备，确保模型完全加载到该 GPU
+            # Specify GPU device explicitly to ensure model loads completely to this GPU
             device = f"cuda:{self.device_id}"
             device_map = {"": device}
-            print(f"使用指定 GPU: {device}")
+            print(f"Using specified GPU: {device}")
         elif num_gpus == 1:
-            # 只有一个可见 GPU 时，直接加载到 cuda:0（避免 auto 的 offload 问题）
+            # Load directly to cuda:0 when only one GPU is visible (avoid auto offload issues)
             device_map = {"": "cuda:0"}
-            print("检测到单 GPU，直接加载到 cuda:0")
+            print("Single GPU detected, loading directly to cuda:0")
         elif num_gpus > 1:
-            # 多个 GPU 时使用自动分配
+            # Use automatic allocation for multiple GPUs
             device_map = "auto"
-            print("检测到多 GPU，使用自动设备映射")
+            print("Multiple GPUs detected, using automatic device mapping")
         else:
-            # 没有 GPU 时使用 CPU
+            # Use CPU when no GPU is available
             device_map = "cpu"
-            print("未检测到 GPU，使用 CPU")
+            print("No GPUs detected, using CPU")
         
-        # 使用官方推荐的 Qwen3VLForConditionalGeneration
-        # 参考: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+        # Use officially recommended Qwen3VLForConditionalGeneration
+        # Reference: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
         self.model = Qwen3VLForConditionalGeneration.from_pretrained(
             self.model_path,
             torch_dtype=self.torch_dtype,
@@ -80,49 +80,49 @@ class Qwen3VLModel:
             trust_remote_code=True,
         )
         
-        # 设置模型为推理模式
+        # Set model to inference mode
         self.model.eval()
         
-        # 打印实际加载的设备信息
-        print(f"模型加载完成，实际设备: {self.model.device}")
+        # Print actual loaded device information
+        print(f"Model loaded successfully, actual device: {self.model.device}")
         
     def load_lora(self, lora_path: str):
         """
-        加载 LoRA 适配器
+        Load LoRA adapter
         
         Args:
-            lora_path: LoRA 权重路径
+            lora_path: Path to LoRA weights
         """
         if self.model is None:
             self.load_model()
             
         if self.current_lora_path == lora_path:
-            print(f"LoRA 已加载: {lora_path}")
+            print(f"LoRA already loaded: {lora_path}")
             return
             
-        # 如果已有 LoRA，先卸载
+        # Unload existing LoRA if present
         if self.current_lora_path is not None:
             self.unload_lora()
             
         if lora_path and os.path.exists(lora_path):
-            print(f"正在加载 LoRA: {lora_path}")
+            print(f"Loading LoRA: {lora_path}")
             self.model = PeftModel.from_pretrained(
                 self.model,
                 lora_path,
                 is_trainable=False,
             )
             self.current_lora_path = lora_path
-            print("LoRA 加载完成")
+            print("LoRA loaded successfully")
         else:
-            print(f"LoRA 路径不存在: {lora_path}")
+            print(f"LoRA path does not exist: {lora_path}")
             
     def unload_lora(self):
-        """卸载当前 LoRA 适配器"""
+        """Unload current LoRA adapter"""
         if self.current_lora_path is not None and hasattr(self.model, 'unload'):
-            print("正在卸载 LoRA...")
+            print("Unloading LoRA...")
             self.model = self.model.unload()
             self.current_lora_path = None
-            print("LoRA 已卸载")
+            print("LoRA unloaded successfully")
             
     def generate(
         self,
@@ -135,27 +135,27 @@ class Qwen3VLModel:
         do_sample: bool = True,
     ) -> str:
         """
-        生成回复（按官方推荐方式）
+        Generate response (following official recommended method)
         
         Args:
-            image_path: 图片路径
-            prompt: 提示词
-            max_new_tokens: 最大生成长度
-            temperature: 温度参数
-            top_p: top-p 采样参数
-            top_k: top-k 采样参数
-            do_sample: 是否采样
+            image_path: Path to image
+            prompt: Prompt
+            max_new_tokens: Maximum new tokens
+            temperature: Temperature parameter
+            top_p: Top-p sampling parameter
+            top_k: Top-k sampling parameter
+            do_sample: Whether to use sampling
             
         Returns:
-            生成的文本
+            Generated text
         """
         if self.model is None:
             self.load_model()
             
-        # 加载图片
+        # Load image
         image = Image.open(image_path).convert("RGB")
         
-        # 构建消息（官方格式）
+        # Build messages (official format)
         messages = [
             {
                 "role": "user",
@@ -166,7 +166,7 @@ class Qwen3VLModel:
             }
         ]
         
-        # 官方推荐的处理方式：apply_chat_template 直接返回 tensor
+        # Officially recommended processing: apply_chat_template returns tensor directly
         inputs = self.processor.apply_chat_template(
             messages,
             tokenize=True,
@@ -176,7 +176,7 @@ class Qwen3VLModel:
         )
         inputs = inputs.to(self.model.device)
         
-        # 生成参数（参考官方推荐）
+        # Generation parameters (refer to official recommendations)
         generate_kwargs = {
             "max_new_tokens": max_new_tokens,
             "do_sample": do_sample,
@@ -189,11 +189,11 @@ class Qwen3VLModel:
                 "top_k": top_k,
             })
         
-        # 生成
+        # Generate response
         with torch.no_grad():
             generated_ids = self.model.generate(**inputs, **generate_kwargs)
             
-        # 解码输出（只取新生成的部分）
+        # Decode output (only take newly generated part)
         generated_ids_trimmed = [
             out_ids[len(in_ids):] 
             for in_ids, out_ids in zip(inputs.input_ids, generated_ids)
@@ -218,15 +218,15 @@ class Qwen3VLModel:
         do_sample: bool = True,
     ) -> List[str]:
         """
-        批量生成回复（逐个处理）
+        Batch generate responses (process one by one)
         
         Args:
-            image_paths: 图片路径列表
-            prompts: 提示词列表
-            其他参数同 generate
+            image_paths: List of image paths
+            prompts: List of prompts
+            Other parameters same as generate
             
         Returns:
-            生成的文本列表
+            List of generated texts
         """
         results = []
         for image_path, prompt in zip(image_paths, prompts):
@@ -243,7 +243,7 @@ class Qwen3VLModel:
         return results
 
 
-# 全局模型实例（单例模式）
+# Global model instance (singleton pattern)
 _model_instance: Optional[Qwen3VLModel] = None
 
 
@@ -253,15 +253,15 @@ def get_model(
     device_id: Optional[int] = None,
 ) -> Qwen3VLModel:
     """
-    获取模型实例（单例模式）
+    Get model instance (singleton pattern)
     
     Args:
-        model_path: 模型路径
-        lora_path: LoRA 权重路径（可选）
-        device_id: GPU 设备 ID（如 0, 1, 2...），None 表示自动选择
+        model_path: Model path
+        lora_path: Path to LoRA weights (optional)
+        device_id: GPU device ID (e.g., 0, 1, 2...), None for automatic selection
         
     Returns:
-        模型实例
+        Model instance
     """
     global _model_instance
     

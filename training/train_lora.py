@@ -1,10 +1,10 @@
 """
-LoRA 微调脚本 - 使用 PEFT 库
-支持两种微调方案：
-- l-1: 包含 improved_summary
-- l-2: 不包含 improved_summary
+LoRA Fine-tuning Script - Using PEFT Library
+Supports two fine-tuning schemes:
+- l-1: Includes improved_summary
+- l-2: Excludes improved_summary
 
-参考：https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
+Reference: https://huggingface.co/Qwen/Qwen3-VL-8B-Instruct
 """
 import os
 import json
@@ -30,21 +30,21 @@ from peft import (
 
 
 class FigureEvaluationDataset(Dataset):
-    """图表评估数据集 - 按照 Qwen3-VL 官方推荐方式处理"""
+    """Figure Evaluation Dataset - Processed according to Qwen3-VL official recommendations"""
     
     def __init__(
         self,
         data_path: str,
         processor,
-        max_pixels: int = 1280 * 28 * 28,  # 控制图片大小，减少显存
+        max_pixels: int = 1280 * 28 * 28,  # Control image size to reduce VRAM usage
         min_pixels: int = 256 * 28 * 28,
     ):
         """
         Args:
-            data_path: 训练数据 JSON 文件路径
-            processor: 模型处理器
-            max_pixels: 图片最大像素数（用于控制显存）
-            min_pixels: 图片最小像素数
+            data_path: Path to training data JSON file
+            processor: Model processor
+            max_pixels: Maximum number of pixels for images (to control VRAM usage)
+            min_pixels: Minimum number of pixels for images
         """
         with open(data_path, "r", encoding="utf-8") as f:
             self.data = json.load(f)
@@ -62,15 +62,15 @@ class FigureEvaluationDataset(Dataset):
         image_path = item["image"]
         conversations = item["conversations"]
         
-        # 加载图片
+        # Load image
         try:
             image = Image.open(image_path).convert("RGB")
         except Exception as e:
-            print(f"加载图片失败 {image_path}: {e}")
-            # 返回一个空白图片
+            print(f"Failed to load image {image_path}: {e}")
+            # Return a blank image
             image = Image.new("RGB", (224, 224), color="white")
             
-        # 构建消息 - 使用 URL/路径 格式而非直接传入 PIL Image
+        # Build messages - Use URL/path format instead of passing PIL Image directly
         user_content = conversations[0]["content"]
         assistant_content = conversations[1]["content"]
         
@@ -90,8 +90,8 @@ class FigureEvaluationDataset(Dataset):
             },
         ]
         
-        # 按照官方文档推荐的方式处理
-        # 使用 apply_chat_template 一步完成 tokenize
+        # Process according to official documentation recommendations
+        # Use apply_chat_template to complete tokenization in one step
         inputs = self.processor.apply_chat_template(
             messages,
             tokenize=True,
@@ -102,11 +102,11 @@ class FigureEvaluationDataset(Dataset):
             min_pixels=self.min_pixels,
         )
         
-        # 移除 batch 维度
+        # Remove batch dimension
         input_ids = inputs["input_ids"].squeeze(0)
         attention_mask = inputs["attention_mask"].squeeze(0)
         
-        # 创建 labels（复制 input_ids）
+        # Create labels (copy input_ids)
         labels = input_ids.clone()
         
         result = {
@@ -115,14 +115,14 @@ class FigureEvaluationDataset(Dataset):
             "labels": labels,
         }
         
-        # 处理 pixel_values
+        # Process pixel_values
         if "pixel_values" in inputs:
             pixel_values = inputs["pixel_values"]
             if pixel_values.dim() == 5:  # (batch, num_images, channels, height, width)
                 pixel_values = pixel_values.squeeze(0)
             result["pixel_values"] = pixel_values
         
-        # 处理 image_grid_thw
+        # Process image_grid_thw
         if "image_grid_thw" in inputs:
             image_grid_thw = inputs["image_grid_thw"]
             if image_grid_thw.dim() == 3:  # (batch, num_images, 3)
@@ -134,9 +134,9 @@ class FigureEvaluationDataset(Dataset):
 
 def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
     """
-    数据批处理函数 - 动态 padding
+    Data Collation Function - Dynamic padding
     """
-    # 找到最大长度
+    # Find maximum length
     max_len = max(item["input_ids"].size(0) for item in batch)
     
     # Padding input_ids, attention_mask, labels
@@ -179,12 +179,12 @@ def collate_fn(batch: List[Dict[str, Any]]) -> Dict[str, torch.Tensor]:
         "labels": torch.stack(labels_list),
     }
     
-    # 处理 pixel_values - 使用 cat 合并
+    # Process pixel_values - Merge with cat
     if "pixel_values" in batch[0] and batch[0]["pixel_values"] is not None:
         pixel_values = torch.cat([item["pixel_values"] for item in batch], dim=0)
         result["pixel_values"] = pixel_values
     
-    # 处理 image_grid_thw - 使用 cat 合并
+    # Process image_grid_thw - Merge with cat
     if "image_grid_thw" in batch[0] and batch[0]["image_grid_thw"] is not None:
         image_grid_thw = torch.cat([item["image_grid_thw"] for item in batch], dim=0)
         result["image_grid_thw"] = image_grid_thw
@@ -209,30 +209,30 @@ def train_lora(
     use_flash_attn: bool = False,
 ):
     """
-    执行 LoRA 微调
+    Perform LoRA Fine-tuning
     
     Args:
-        model_path: 基础模型路径
-        data_path: 训练数据路径
-        output_dir: 输出目录
-        resume_lora_path: 现有 LoRA 权重路径（用于增量微调）
+        model_path: Path to base model
+        data_path: Path to training data
+        output_dir: Output directory
+        resume_lora_path: Path to existing LoRA weights (for incremental fine-tuning)
         lora_r: LoRA rank
         lora_alpha: LoRA alpha
-        lora_dropout: LoRA dropout
-        learning_rate: 学习率
-        num_epochs: 训练轮数
-        batch_size: 批次大小
-        gradient_accumulation_steps: 梯度累积步数
-        max_pixels: 图片最大像素数（控制显存）
-        save_steps: 保存步数
-        use_flash_attn: 是否使用 flash attention 2
+        lora_dropout: LoRA dropout rate
+        learning_rate: Learning rate
+        num_epochs: Number of training epochs
+        batch_size: Batch size
+        gradient_accumulation_steps: Number of gradient accumulation steps
+        max_pixels: Maximum number of pixels for images (controls VRAM usage)
+        save_steps: Number of steps between checkpoints
+        use_flash_attn: Whether to use Flash Attention 2
     """
     print("=" * 60)
-    print("LoRA 微调 - Qwen3-VL")
+    print("LoRA Fine-tuning - Qwen3-VL")
     print("=" * 60)
     
-    # 加载模型
-    print(f"\n加载模型: {model_path}")
+    # Load model
+    print(f"\nLoading model: {model_path}")
     
     model_kwargs = {
         "torch_dtype": torch.bfloat16,
@@ -240,19 +240,19 @@ def train_lora(
         "trust_remote_code": True,
     }
     
-    # 使用 flash attention 2 可以节省显存并加速
+    # Using Flash Attention 2 can save VRAM and accelerate training
     if use_flash_attn:
         model_kwargs["attn_implementation"] = "flash_attention_2"
-        print("使用 Flash Attention 2")
+        print("Using Flash Attention 2")
     
     model = Qwen3VLForConditionalGeneration.from_pretrained(
         model_path,
         **model_kwargs,
     )
     
-    # 启用 gradient checkpointing 来节省显存
+    # Enable gradient checkpointing to save VRAM
     model.gradient_checkpointing_enable()
-    print("已启用 Gradient Checkpointing")
+    print("Gradient Checkpointing enabled")
     
     processor = AutoProcessor.from_pretrained(
         model_path,
@@ -261,19 +261,19 @@ def train_lora(
         min_pixels=256 * 28 * 28,
     )
     
-    # 配置 LoRA
+    # Configure LoRA
     if resume_lora_path:
-        # 增量微调：加载现有 LoRA 权重继续训练
-        print(f"\n加载现有 LoRA 权重进行增量微调: {resume_lora_path}")
+        # Incremental fine-tuning: Load existing LoRA weights to continue training
+        print(f"\nLoading existing LoRA weights for incremental fine-tuning: {resume_lora_path}")
         model = PeftModel.from_pretrained(
             model,
             resume_lora_path,
-            is_trainable=True,  # 关键：允许继续训练
+            is_trainable=True,  # Key: allow continued training
         )
-        print("已加载现有 LoRA 权重")
+        print("Existing LoRA weights loaded")
     else:
-        # 从头开始：创建新的 LoRA 配置
-        print("\n创建新的 LoRA 配置...")
+        # Start from scratch: Create new LoRA configuration
+        print("\nCreating new LoRA configuration...")
         lora_config = LoraConfig(
             r=lora_r,
             lora_alpha=lora_alpha,
@@ -293,17 +293,17 @@ def train_lora(
     
     model.print_trainable_parameters()
     
-    # 加载数据集
-    print(f"\n加载数据集: {data_path}")
+    # Load dataset
+    print(f"\nLoading dataset: {data_path}")
     dataset = FigureEvaluationDataset(
         data_path=data_path,
         processor=processor,
         max_pixels=max_pixels,
     )
-    print(f"数据集大小: {len(dataset)}")
-    print(f"图片最大像素: {max_pixels} ({int((max_pixels / 28 / 28) ** 0.5 * 28)}x{int((max_pixels / 28 / 28) ** 0.5 * 28)} 左右)")
+    print(f"Dataset size: {len(dataset)}")
+    print(f"Maximum image pixels: {max_pixels} (approximately {int((max_pixels / 28 / 28) ** 0.5 * 28)}x{int((max_pixels / 28 / 28) ** 0.5 * 28)})")
     
-    # 配置训练参数
+    # Configure training parameters
     training_args = TrainingArguments(
         output_dir=output_dir,
         num_train_epochs=num_epochs,
@@ -321,12 +321,12 @@ def train_lora(
         remove_unused_columns=False,
         report_to="none",
         gradient_checkpointing=True,
-        # 优化显存
+        # Optimize VRAM usage
         optim="adamw_torch_fused",
         dataloader_pin_memory=False,
     )
     
-    # 创建 Trainer
+    # Create Trainer
     trainer = Trainer(
         model=model,
         args=training_args,
@@ -334,46 +334,46 @@ def train_lora(
         data_collator=collate_fn,
     )
     
-    # 开始训练
-    print("\n开始训练...")
+    # Start training
+    print("\nStarting training...")
     trainer.train()
     
-    # 保存 LoRA 权重
-    print(f"\n保存 LoRA 权重到: {output_dir}")
+    # Save LoRA weights
+    print(f"\nSaving LoRA weights to: {output_dir}")
     model.save_pretrained(output_dir)
     
     print("\n" + "=" * 60)
-    print("训练完成!")
+    print("Training completed!")
     print("=" * 60)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="LoRA 微调脚本")
+    parser = argparse.ArgumentParser(description="LoRA Fine-tuning Script")
     
     parser.add_argument(
         "--model_path",
         type=str,
         default="./Qwen3-VL-8B-Instruct",
-        help="基础模型路径",
+        help="Path to base model",
     )
     parser.add_argument(
         "--data_path",
         type=str,
         required=True,
-        help="训练数据路径（JSON 格式）",
+        help="Path to training data (JSON format)",
     )
     parser.add_argument(
         "--output_dir",
         type=str,
         required=True,
-        help="输出目录",
+        help="Output directory",
     )
     parser.add_argument(
         "--scheme",
         type=str,
         choices=["l-1", "l-2"],
         default="l-1",
-        help="微调方案: l-1（含improved_summary）或 l-2（不含）",
+        help="Fine-tuning scheme: l-1 (includes improved_summary) or l-2 (excludes)",
     )
     parser.add_argument(
         "--lora_r",
@@ -391,47 +391,47 @@ def main():
         "--learning_rate",
         type=float,
         default=2e-4,
-        help="学习率",
+        help="Learning rate",
     )
     parser.add_argument(
         "--num_epochs",
         type=int,
         default=3,
-        help="训练轮数",
+        help="Number of training epochs",
     )
     parser.add_argument(
         "--batch_size",
         type=int,
         default=1,
-        help="批次大小",
+        help="Batch size",
     )
     parser.add_argument(
         "--gradient_accumulation_steps",
         type=int,
         default=8,
-        help="梯度累积步数",
+        help="Number of gradient accumulation steps",
     )
     parser.add_argument(
         "--max_pixels",
         type=int,
         default=1280 * 28 * 28,
-        help="图片最大像素数（控制显存，默认约 1280x1280）",
+        help="Maximum number of pixels for images (controls VRAM, default ~1280x1280)",
     )
     parser.add_argument(
         "--flash_attn",
         action="store_true",
-        help="使用 Flash Attention 2（需要安装 flash-attn）",
+        help="Use Flash Attention 2 (requires flash-attn installation)",
     )
     parser.add_argument(
         "--resume_lora_path",
         type=str,
         default=None,
-        help="现有 LoRA 权重路径（用于增量微调，在已有权重基础上继续训练）",
+        help="Path to existing LoRA weights (for incremental fine-tuning, continue training on existing weights)",
     )
     
     args = parser.parse_args()
     
-    # 根据方案设置默认输出目录
+    # Set default output directory based on scheme
     if args.output_dir is None:
         args.output_dir = f"./lora_weights/{args.scheme}"
         
