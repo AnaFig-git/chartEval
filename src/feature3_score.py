@@ -12,7 +12,7 @@ from .utils import parse_final_json
 EVALUATE_PROMPT_SCORE_ONLY = '''You are a professional expert in figure-summary evaluation, skilled at conducting strict five-dimension evaluations based on multimodal input (image + text).
 
 Based on the input "figure image" and "original summary,"
-you must evaluate the summary along the following five dimensions with a strict 0/1/2 scoring scheme, and provide reasons. And set weights (ranging from 0 to 1) for each dimension, and ensure that the sum of the weights for the five dimensions is 1.
+you must evaluate the summary along the following five dimensions with a strict 0/1/2 scoring scheme, and provide reasons. 
 
 ---
 
@@ -58,7 +58,7 @@ you must evaluate the summary along the following five dimensions with a strict 
 1. You must output standardized JSON inside `<evaluation>` tags, with the following structure:
 
 <evaluation>
-{{"scores": {{"faithfulness": 0-2, "completeness": 0-2, "conciseness": 0-2, "logicality": 0-2, "analysis": 0-2}}, "reasons": {{"faithfulness": "brief explanation", "completeness": "brief explanation", "conciseness": "brief explanation", "logicality": "brief explanation", "analysis": "brief explanation"}}, "weights": {{"faithfulness": 0.35, "completeness": 0.25, "conciseness": 0.20, "logicality": 0.15, "analysis": 0.05}}}}
+{{"scores": {{"faithfulness": 0-2, "completeness": 0-2, "conciseness": 0-2, "logicality": 0-2, "analysis": 0-2}}, "reasons": {{"faithfulness": "brief explanation", "completeness": "brief explanation", "conciseness": "brief explanation", "logicality": "brief explanation", "analysis": "brief explanation"}}}}
 </evaluation>
 
 2. The JSON must be valid, single-line JSON.  

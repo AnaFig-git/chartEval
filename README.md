@@ -7,7 +7,7 @@ This repository contains the code to use AgentGER from the paper [AgentGER: Towa
 ## 👋 Introduction
 Figure-to-text is a key task for assessing figure understanding capabilities of models. Existing approaches face two main challenges: the high cost of constructing high-quality data and the lack of fine-grained, interpretable evaluation aligned with human experts. Accordingly, we propose AgentGER, an agent framework that integrates capabilities of generation, evaluation, and refinement for figure-to-text. AgentGER includes a Generation Model that produces summaries with hierarchical quality levels, an Evaluation Model that performs multi-dimensional, human-aligned assessment with a Chain-of-Evaluation mechanism, and a Refinement Model that improves summaries based on evaluation feedback. We further construct a large-scale dataset with 11,000 summaries and 55,000 multi-dimensional scoring labels through a human–machine collaborative pipeline. Experiments show that AgentGER significantly outperforms all strong baselines, surpasses Gemini-3.0-Pro on evaluation benchmarks, and achieves performance comparable to human experts in both evaluation and refinement tasks.
 <p align="center">
-  <img src="System Architecture2.png"  />
+  <img src="Introduction.png"  width="70%"/>
 </p> 
 
 ## ⚙ System Architecture
@@ -88,11 +88,11 @@ python main.py feature1 \
 python main.py feature2 \
     --image ./data/sample.png \
     --summary "Original summary content" \
-    --lora_path ./lora_weights/l-2 \  # l-3-distill (better performance) is also available
+    --lora_path ./lora_weights/l-2 \
     --output ./output/result.jsonl \
     --gpu 0
 ```
-🗄️ After running the feature2 branch of [main.py](main.py), the existing summary of sample.png is scored, a refined summary is generated, and results are saved to ./output/result.jsonl.。
+🗄️ After running the feature2 branch of [main.py](main.py), the existing summary of sample.png is scored, a refined summary is generated, and results are saved to ./output/result.jsonl.You can also use l-3-distill for the lora_path, which delivers better performance.
 ### Stage 3: Scoring Validation
 ```bash
 python main.py feature3 \
@@ -107,15 +107,15 @@ python main.py feature3 \
 ```bash
 python main.py pipeline1 \
     --image_folder ./data/images \
-    --output ./data/output/dataset.jsonl \
-    --lora_path_f2 ./lora_weights/l-2 \ # l-3-distill (better performance) is also available  
-    --lora_path_f3 ./lora_weights/l-1 \ 
+    --output ./data/output/dataset_result.jsonl \
+    --lora_path_f2 ./lora_weights/l-2 \
+    --lora_path_f3 ./lora_weights/l-1 \
     --max_retries 3 \
     --gpu 0
 ```
 * `--max_retries`：Maximum number of retries; discard if exceeding 3 times
  
-🗄️ After running the pipeline1 branch of [main.py](main.py), summaries are generated for all images in the images folder, followed by scoring and refined summary generation, and finally re-scoring of the refined summaries. 
+🗄️ After running the pipeline1 branch of [main.py](main.py), summaries are generated for all images in the images folder, followed by scoring and refined summary generation, and finally re-scoring of the refined summaries. You can also use l-3-distill for the lora_path_f2, which delivers better performance.
 
 ## 🛴 API Usage
 In addition to deploying the model locally, the framework functions can also be implemented by calling the API.
